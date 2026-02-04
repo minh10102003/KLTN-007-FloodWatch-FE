@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaLock } from 'react-icons/fa6';
 import UserDropdown from './UserDropdown';
 import { getCurrentUser } from '../services/api';
 
@@ -66,7 +67,7 @@ const SensorStats = ({ floodData, loading }) => {
                 e.target.style.background = 'rgba(255,255,255,0.2)';
               }}
             >
-              🔐 Đăng nhập
+              <FaLock /> Đăng nhập
             </button>
           )}
           {currentUser && <UserDropdown />}

@@ -1,13 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { fetchFloodData, fetchCrowdReports, isAuthenticated } from '../../services/api';
-import { POLLING_INTERVALS } from '../../config/apiConfig';
 import { useNavigate } from 'react-router-dom';
-import SensorStats from '../../components/SensorStats';
+import { fetchFloodData, fetchCrowdReports } from '../../services/api';
+import { POLLING_INTERVALS } from '../../config/apiConfig';
 import MapView from '../../components/MapView';
-import AlertPanel from '../../components/AlertPanel';
-import CrowdReportsList from '../../components/CrowdReportsList';
 import ChatBot from '../../components/ChatBot';
-import GuestLoginPrompt from '../../components/GuestLoginPrompt';
+import SensorDetailPanel from '../../components/SensorDetailPanel';
+import WeatherNewsSection from '../../components/WeatherNewsSection';
+import { FaMap } from 'react-icons/fa6';
 import './DashboardPage.css';
 
 const DashboardPage = () => {
@@ -15,9 +14,15 @@ const DashboardPage = () => {
   const [floodData, setFloodData] = useState([]);
   const [crowdReports, setCrowdReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [crowdReportsLoading, setCrowdReportsLoading] = useState(true);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [selectedSensor, setSelectedSensor] = useState(null);
   const endpointRef = useRef(null);
+
+  // Tự động chọn sensor đầu tiên khi có dữ liệu
+  useEffect(() => {
+    if (floodData.length > 0 && !selectedSensor) {
+      setSelectedSensor(floodData[0]);
+    }
+  }, [floodData, selectedSensor]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -27,7 +32,6 @@ const DashboardPage = () => {
       if (result.success && result.data) {
         setFloodData(result.data);
       } else if (result.data === null) {
-        console.warn('Giữ dữ liệu cũ do lỗi kết nối');
       } else {
         setFloodData([]);
       }
@@ -42,80 +46,62 @@ const DashboardPage = () => {
 
   useEffect(() => {
     const loadCrowdReports = async () => {
-      setCrowdReportsLoading(true);
       const result = await fetchCrowdReports();
       
       if (result.success && result.data) {
         setCrowdReports(result.data);
       }
-      
-      setCrowdReportsLoading(false);
     };
 
     loadCrowdReports();
     const interval = setInterval(loadCrowdReports, POLLING_INTERVALS.CROWD_REPORTS);
-    return () => clearInterval(interval);
+    
+    // Listen for refresh event từ ModerationPage
+    const handleReportsUpdated = () => {
+      loadCrowdReports();
+    };
+    window.addEventListener('reportsUpdated', handleReportsUpdated);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('reportsUpdated', handleReportsUpdated);
+    };
   }, []);
 
   return (
     <div className="dashboard-container">
-      <SensorStats floodData={floodData} loading={loading} />
-
       <div className="dashboard-main">
-        <div className="dashboard-map">
-          <MapView floodData={floodData} crowdReports={crowdReports} />
+        <div className="dashboard-map-wrapper">
+          <div className="dashboard-map">
+            <MapView 
+              floodData={floodData} 
+              crowdReports={crowdReports} 
+              onSensorSelect={setSelectedSensor}
+            />
+          </div>
         </div>
+        <SensorDetailPanel sensor={selectedSensor} />
+      </div>
 
-        <div className="dashboard-sidebar">
-          <div className="dashboard-tabs">
-            <button
-              className="dashboard-tab active"
-              style={{ cursor: 'default' }}
+      <div className="dashboard-content-wrapper">
+        {/* Banner Section */}
+        <div className="dashboard-banner">
+          <div className="dashboard-banner-content">
+            <h2 className="dashboard-banner-title">Truy cập bản đồ chi tiết</h2>
+            <button 
+              className="dashboard-banner-button"
+              onClick={() => navigate('/map')}
             >
-              🚨 Cảnh báo
-            </button>
-          </div>
-
-          <div className="dashboard-content">
-            <AlertPanel floodData={floodData} />
-            <div className="dashboard-divider">
-              <CrowdReportsList reports={crowdReports.slice(0, 5)} loading={crowdReportsLoading} />
-              {crowdReports.length > 5 && (
-                <button
-                  onClick={() => navigate('/reports')}
-                  className="dashboard-view-all-btn"
-                >
-                  Xem tất cả báo cáo ({crowdReports.length})
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="dashboard-footer">
-            <button
-              onClick={() => {
-                if (!isAuthenticated()) {
-                  setShowLoginPrompt(true);
-                } else {
-                  navigate('/report/new');
-                }
-              }}
-              className="dashboard-report-btn"
-            >
-              📝 Báo cáo ngập lụt
+              Xem bản đồ thông minh
             </button>
           </div>
         </div>
+
+        {/* Weather and News Section */}
+        <WeatherNewsSection />
       </div>
 
       <ChatBot />
-      
-      {showLoginPrompt && (
-        <GuestLoginPrompt 
-          message="Vui lòng đăng nhập để báo cáo tình trạng ngập lụt. Thông tin của bạn giúp cộng đồng cập nhật tình hình thời tiết thực tế!"
-          onClose={() => setShowLoginPrompt(false)}
-        />
-      )}
     </div>
   );
 };

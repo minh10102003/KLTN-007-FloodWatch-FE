@@ -36,20 +36,20 @@ export const createCustomIcon = (color, isBlinking = false) => {
   });
 };
 
-// Định dạng trạng thái
+// Định dạng trạng thái (không có icon, icon sẽ được xử lý ở component)
 export const getStatusLabel = (status) => {
   const labels = {
-    normal: '✅ Bình thường',
-    warning: '⚠️ Cảnh báo',
-    danger: '🚨 Nguy hiểm',
-    offline: '🔌 Mất kết nối'
+    normal: 'Bình thường',
+    warning: 'Cảnh báo',
+    danger: 'Nguy hiểm',
+    offline: 'Mất kết nối'
   };
-  return labels[status] || '❓ Không xác định';
+  return labels[status] || 'Không xác định';
 };
 
-// Định dạng velocity
+// Định dạng velocity (không có icon, icon sẽ được xử lý ở component)
 export const getVelocityLabel = (velocity) => {
-  if (velocity > 0) return `📈 Dâng: +${velocity.toFixed(1)} cm/phút`;
-  if (velocity < 0) return `📉 Rút: ${velocity.toFixed(1)} cm/phút`;
-  return '➡️ Ổn định';
+  if (velocity > 0) return `Dâng: +${velocity.toFixed(1)} cm/phút`;
+  if (velocity < 0) return `Rút: ${velocity.toFixed(1)} cm/phút`;
+  return 'Ổn định';
 };

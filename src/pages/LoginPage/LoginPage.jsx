@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { FaUser } from 'react-icons/fa6';
 import { login } from '../../services/api';
 import './LoginPage.css';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -34,16 +36,8 @@ const LoginPage = () => {
   return (
     <div className="login-page">
       <div className="login-container">
-        <div className="login-header">
-          <div className="logo-container">
-            <img src="/iuh.png" alt="IUH Logo" className="iuh-logo" />
-            <h1>FloodWatch</h1>
-          </div>
-          <p>Hệ thống giám sát ngập lụt thông minh</p>
-        </div>
-
         <form className="login-form" onSubmit={handleSubmit}>
-          <h2>Đăng nhập</h2>
+          <h2 className="login-title">Đăng nhập</h2>
           
           {error && (
             <div className="error-message">
@@ -58,7 +52,7 @@ const LoginPage = () => {
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Nhập tên đăng nhập"
+              placeholder=""
               required
               autoFocus
             />
@@ -71,9 +65,21 @@ const LoginPage = () => {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Nhập mật khẩu"
+              placeholder=""
               required
             />
+          </div>
+
+          <div className="form-options">
+            <label className="remember-me">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <span>Ghi nhớ đăng nhập</span>
+            </label>
+            <Link to="#" className="forgot-password">Quên mật khẩu</Link>
           </div>
 
           <button 
@@ -93,15 +99,13 @@ const LoginPage = () => {
             className="btn-guest"
             onClick={() => navigate('/dashboard')}
           >
-            👤 Vào với tư cách khách
+            <FaUser /> Vào với tư cách khách
           </button>
 
-          <p className="guest-note">
-            💡 Khách có thể xem thông tin nhưng không thể báo cáo ngập lụt
-          </p>
+          <p className="guest-note">Khách có thể xem thông tin nhưng không thể báo cáo ngập lụt</p>
 
           <div className="login-footer">
-            <p>Chưa có tài khoản? <a href="/register">Đăng ký ngay</a></p>
+            <p>Chưa có tài khoản? <Link to="/register">Đăng ký</Link></p>
           </div>
         </form>
       </div>

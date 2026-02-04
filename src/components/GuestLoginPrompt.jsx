@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import './GuestLoginPrompt.css';
+import { FaLock } from 'react-icons/fa6';
+import '../styles/components/GuestLoginPrompt.css';
 
 const GuestLoginPrompt = ({ message, onClose }) => {
   const navigate = useNavigate();
@@ -7,7 +8,7 @@ const GuestLoginPrompt = ({ message, onClose }) => {
   return (
     <div className="guest-prompt-overlay" onClick={onClose}>
       <div className="guest-prompt-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="guest-prompt-icon">🔐</div>
+        <div className="guest-prompt-icon"><FaLock /></div>
         <h2 className="guest-prompt-title">Yêu cầu đăng nhập</h2>
         <p className="guest-prompt-message">
           {message || 'Vui lòng đăng nhập để sử dụng tính năng này'}

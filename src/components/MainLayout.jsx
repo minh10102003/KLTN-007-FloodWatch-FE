@@ -136,7 +136,15 @@ const MainLayout = ({ floodData, loading }) => {
                     textTransform: 'uppercase',
                     fontWeight: '500'
                   }}>
-                    {currentUser.role === 'admin' ? '👑 Quản trị viên' : '👤 Người dùng'}
+                    {currentUser.role === 'admin' ? (
+                      <>
+                        <FaCrown style={{ marginRight: '4px' }} /> Quản trị viên
+                      </>
+                    ) : (
+                      <>
+                        <FaUser style={{ marginRight: '4px' }} /> Người dùng
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -163,7 +171,7 @@ const MainLayout = ({ floodData, loading }) => {
                     e.target.style.background = 'white';
                   }}
                 >
-                  <span>👤</span>
+                  <FaUser />
                   Thông tin cá nhân
                 </button>
 
@@ -193,7 +201,7 @@ const MainLayout = ({ floodData, loading }) => {
                     e.target.style.background = 'white';
                   }}
                 >
-                  <span>🚪</span>
+                  <FaRightFromBracket />
                   Đăng xuất
                 </button>
               </div>

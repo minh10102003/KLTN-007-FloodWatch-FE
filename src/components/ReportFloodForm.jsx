@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, Fragment } from 'react';
+import { Combobox, Transition } from '@headlessui/react';
+import { CheckIcon } from '@heroicons/react/20/solid';
+import { ChevronUpDownIcon } from '@heroicons/react/20/solid';
 import { MapContainer, TileLayer, useMapEvents, Marker } from 'react-leaflet';
+import { FaPenToSquare, FaCheck, FaXmark, FaClock, FaPaperPlane, FaXmark as FaClose } from 'react-icons/fa6';
 import { submitFloodReport } from '../services/api';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../utils/constants';
 import L from 'leaflet';
@@ -40,11 +44,33 @@ const ReportFloodForm = ({ onSuccess, onClose }) => {
     reporter_id: null, // Có thể lấy từ user context sau
     level: '',
     lng: null,
-    lat: null
+    lat: null,
+    location_description: null
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  
+  // Flood level options for Combobox
+  const floodLevelOptions = [
+    { id: '', name: '-- Chọn mức độ ngập --' },
+    { id: 'Nhẹ', name: 'Nhẹ - Đến mắt cá (~10cm)' },
+    { id: 'Trung bình', name: 'Trung bình - Đến đầu gối (~30cm)' },
+    { id: 'Nặng', name: 'Nặng - Ngập nửa xe (~50cm)' },
+  ];
+  
+  const selectedLevel = floodLevelOptions.find(opt => opt.id === formData.level) || floodLevelOptions[0];
+  const [levelQuery, setLevelQuery] = useState('');
+  
+  const filteredLevels =
+    levelQuery === ''
+      ? floodLevelOptions
+      : floodLevelOptions.filter((option) =>
+          option.name
+            .toLowerCase()
+            .replace(/\s+/g, '')
+            .includes(levelQuery.toLowerCase().replace(/\s+/g, ''))
+        );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -78,7 +104,8 @@ const ReportFloodForm = ({ onSuccess, onClose }) => {
           name: '',
           level: '',
           lng: null,
-          lat: null
+          lat: null,
+          location_description: null
         });
         
         // Callback success (chỉ gọi nếu có data)
@@ -95,9 +122,90 @@ const ReportFloodForm = ({ onSuccess, onClose }) => {
     }
   };
 
-  const handleLocationSelect = (lng, lat) => {
-    setFormData({ ...formData, lng, lat });
+  const formatAddress = (data) => {
+    if (!data || !data.address) return null;
+    
+    const addr = data.address;
+    const parts = [];
+    
+    // Ưu tiên: tên đường > tên địa điểm > quận/huyện > thành phố
+    if (addr.road) {
+      parts.push(addr.road);
+    }
+    if (addr.house_number) {
+      parts.unshift(addr.house_number); // Số nhà đặt trước tên đường
+    }
+    if (addr.suburb || addr.neighbourhood) {
+      parts.push(addr.suburb || addr.neighbourhood);
+    }
+    if (addr.ward) {
+      parts.push(`Phường ${addr.ward}`);
+    }
+    if (addr.district || addr.city_district) {
+      parts.push(`Quận ${addr.district || addr.city_district}`);
+    }
+    if (addr.city && !addr.district) {
+      parts.push(addr.city);
+    }
+    if (addr.state) {
+      parts.push(addr.state);
+    }
+    
+    // Nếu có đủ thông tin, trả về địa chỉ đã format
+    if (parts.length > 0) {
+      return parts.join(', ');
+    }
+    
+    // Fallback: dùng display_name nhưng format lại
+    if (data.display_name) {
+      // Loại bỏ các phần không cần thiết như country code
+      const displayName = data.display_name
+        .split(',')
+        .slice(0, 4) // Lấy 4 phần đầu (thường là địa chỉ cụ thể)
+        .join(', ')
+        .trim();
+      return displayName;
+    }
+    
+    return null;
+  };
+
+  const handleLocationSelect = async (lng, lat) => {
+    setFormData({ ...formData, lng, lat, location_description: null });
     setError(null);
+    
+    // Reverse geocoding để lấy địa chỉ từ tọa độ
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=vi`,
+        {
+          headers: {
+            'User-Agent': 'HCM-Flood-Frontend/1.0'
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Reverse geocoding failed');
+      }
+      
+      const data = await response.json();
+      
+      if (data) {
+        // Format địa chỉ đẹp hơn
+        const formattedAddress = formatAddress(data);
+        
+        if (formattedAddress) {
+          setFormData(prev => ({ ...prev, lng, lat, location_description: formattedAddress }));
+        } else if (data.display_name) {
+          // Fallback: dùng display_name gốc
+          setFormData(prev => ({ ...prev, lng, lat, location_description: data.display_name }));
+        }
+      }
+    } catch (err) {
+      // Vẫn cho phép submit với lat/lng, nhưng thử lấy địa chỉ đơn giản hơn
+      setFormData(prev => ({ ...prev, lng, lat }));
+    }
   };
 
   return (
@@ -126,7 +234,9 @@ const ReportFloodForm = ({ onSuccess, onClose }) => {
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <h2 style={{ margin: 0, fontSize: '1.3rem' }}>📝 Báo cáo ngập lụt</h2>
+        <h2 style={{ margin: 0, fontSize: '1.3rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          Báo cáo ngập lụt
+        </h2>
         {onClose && (
           <button
             onClick={onClose}
@@ -139,7 +249,7 @@ const ReportFloodForm = ({ onSuccess, onClose }) => {
               padding: '0 10px'
             }}
           >
-            ✕
+            <FaClose />
           </button>
         )}
       </div>
@@ -173,24 +283,78 @@ const ReportFloodForm = ({ onSuccess, onClose }) => {
           <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
             Mức độ ngập <span style={{ color: 'red' }}>*</span>
           </label>
-          <select
-            value={formData.level}
-            onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              fontSize: '14px',
-              boxSizing: 'border-box'
-            }}
-            required
-          >
-            <option value="">-- Chọn mức độ ngập --</option>
-            <option value="Nhẹ">Nhẹ - Đến mắt cá (~10cm)</option>
-            <option value="Trung bình">Trung bình - Đến đầu gối (~30cm)</option>
-            <option value="Nặng">Nặng - Ngập nửa xe (~50cm)</option>
-          </select>
+          <div className="relative">
+            <Combobox value={selectedLevel} onChange={(option) => {
+              setFormData({ ...formData, level: option.id });
+            }}>
+              <div className="relative mt-1">
+                <div className="relative w-full cursor-default overflow-hidden rounded-lg bg-white text-left shadow-md border border-gray-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-200 text-xs">
+                  <Combobox.Input
+                    className="w-full border-none py-2 pl-3 pr-10 text-xs leading-4 text-gray-900 focus:ring-0 focus:outline-none cursor-pointer"
+                    displayValue={(option) => option.name}
+                    onChange={(event) => setLevelQuery(event.target.value)}
+                    onClick={(e) => {
+                      e.target.select();
+                    }}
+                  />
+                  <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2 focus:outline-none outline-none border-none bg-transparent">
+                    <ChevronUpDownIcon
+                      className="h-5 w-5 text-gray-400 pointer-events-none"
+                      aria-hidden="true"
+                    />
+                  </Combobox.Button>
+                </div>
+                <Transition
+                  as={Fragment}
+                  leave="transition ease-in duration-100"
+                  leaveFrom="opacity-100"
+                  leaveTo="opacity-0"
+                  afterLeave={() => setLevelQuery('')}
+                >
+                  <Combobox.Options className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-xs shadow-lg ring-1 ring-black/5 focus:outline-none">
+                    {filteredLevels.length === 0 && levelQuery !== '' ? (
+                      <div className="relative cursor-default select-none px-4 py-2 text-gray-700">
+                        Không tìm thấy.
+                      </div>
+                    ) : (
+                      filteredLevels.map((option) => (
+                        <Combobox.Option
+                          key={option.id}
+                          className={({ active }) =>
+                            `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                              active ? 'bg-blue-600 text-white' : 'text-gray-900'
+                            }`
+                          }
+                          value={option}
+                        >
+                          {({ selected, active }) => (
+                            <>
+                              <span
+                                className={`block truncate ${
+                                  selected ? 'font-medium' : 'font-normal'
+                                }`}
+                              >
+                                {option.name}
+                              </span>
+                              {selected ? (
+                                <span
+                                  className={`absolute inset-y-0 left-0 flex items-center pl-3 ${
+                                    active ? 'text-white' : 'text-blue-600'
+                                  }`}
+                                >
+                                  <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                                </span>
+                              ) : null}
+                            </>
+                          )}
+                        </Combobox.Option>
+                      ))
+                    )}
+                  </Combobox.Options>
+                </Transition>
+              </div>
+            </Combobox>
+          </div>
         </div>
 
         {/* Bản đồ chọn vị trí */}
@@ -218,9 +382,16 @@ const ReportFloodForm = ({ onSuccess, onClose }) => {
             </MapContainer>
           </div>
           {formData.lat && formData.lng && (
-            <p style={{ fontSize: '12px', color: '#28a745', marginTop: '5px' }}>
-              ✅ Đã chọn: {formData.lat.toFixed(6)}, {formData.lng.toFixed(6)}
-            </p>
+            <div style={{ fontSize: '12px', color: '#28a745', marginTop: '5px' }}>
+              <p style={{ margin: '0 0 4px 0' }}>
+                <FaCheck style={{ marginRight: '6px' }} /> Đã chọn: {formData.lat.toFixed(6)}, {formData.lng.toFixed(6)}
+              </p>
+              {formData.location_description && (
+                <p style={{ margin: '0', color: '#17a2b8', fontSize: '11px' }}>
+                  📍 {formData.location_description}
+                </p>
+              )}
+            </div>
           )}
         </div>
 
@@ -234,7 +405,7 @@ const ReportFloodForm = ({ onSuccess, onClose }) => {
             color: '#dc3545',
             marginBottom: '15px'
           }}>
-            ❌ {error}
+            <FaXmark style={{ marginRight: '6px' }} /> {error}
           </div>
         )}
 
@@ -250,11 +421,11 @@ const ReportFloodForm = ({ onSuccess, onClose }) => {
           }}>
             {result.data.verified_by_sensor ? (
               <>
-                ✅ <strong>Đã xác minh!</strong> {result.message || 'Báo cáo của bạn đã được xác minh bởi hệ thống cảm biến. Cảm ơn!'}
+                <FaCheck style={{ marginRight: '6px' }} /> <strong>Đã xác minh!</strong> {result.message || 'Báo cáo của bạn đã được xác minh bởi hệ thống cảm biến. Cảm ơn!'}
               </>
             ) : (
               <>
-                ⏳ <strong>Đang xem xét</strong> {result.message || 'Báo cáo của bạn đang được xem xét. Cảm ơn!'}
+                <FaClock style={{ marginRight: '6px' }} /> <strong>Đang xem xét</strong> {result.message || 'Báo cáo của bạn đang được xem xét. Cảm ơn!'}
               </>
             )}
           </div>
@@ -270,7 +441,7 @@ const ReportFloodForm = ({ onSuccess, onClose }) => {
             color: '#856404',
             marginBottom: '15px'
           }}>
-            ⏳ {result.message}
+            <FaClock style={{ marginRight: '6px' }} /> {result.message}
           </div>
         )}
 
@@ -291,7 +462,15 @@ const ReportFloodForm = ({ onSuccess, onClose }) => {
             transition: 'background 0.3s'
           }}
         >
-          {loading ? '⏳ Đang gửi...' : '📤 Gửi báo cáo'}
+          {loading ? (
+            <>
+              <FaClock /> Đang gửi...
+            </>
+          ) : (
+            <>
+              <FaPaperPlane /> Gửi báo cáo
+            </>
+          )}
         </button>
       </form>
     </div>

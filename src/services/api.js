@@ -173,9 +173,12 @@ export const submitFloodReport = async (reportData) => {
 };
 
 // Lấy danh sách báo cáo từ người dân (24h qua)
-export const fetchCrowdReports = async () => {
+// Public endpoint - không cần auth
+export const fetchCrowdReports = async (params = {}) => {
   try {
-    const response = await axios.get(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CROWD_REPORTS}`);
+    const queryString = new URLSearchParams(params).toString();
+    // Dùng endpoint public /api/crowd-reports (24h) - không cần auth
+    const response = await axios.get(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CROWD_REPORTS}${queryString ? `?${queryString}` : ''}`);
     
     if (response.data && response.data.success) {
       return { 
@@ -192,15 +195,18 @@ export const fetchCrowdReports = async () => {
     return { 
       success: false, 
       data: [], 
-      error 
+      error: error.response?.data || error.message
     };
   }
 };
 
 // Lấy tất cả báo cáo (không giới hạn thời gian)
-export const fetchAllCrowdReports = async (limit = 100) => {
+export const fetchAllCrowdReports = async (params = {}) => {
   try {
-    const response = await axios.get(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.CROWD_REPORTS_ALL}?limit=${limit}`);
+    const queryParams = { limit: 100, ...params };
+    const queryString = new URLSearchParams(queryParams).toString();
+    // Dùng apiClient để tự động thêm token (cần thiết để backend biết user nào đang request)
+    const response = await apiClient.get(`${API_ENDPOINTS.CROWD_REPORTS_ALL}?${queryString}`);
     
     if (response.data && response.data.success) {
       return { 
@@ -217,7 +223,7 @@ export const fetchAllCrowdReports = async (limit = 100) => {
     return { 
       success: false, 
       data: [], 
-      error 
+      error: error.response?.data || error.message
     };
   }
 };
@@ -366,13 +372,759 @@ export const logout = () => {
   localStorage.removeItem('authToken');
 };
 
-export const getCurrentUser = () => {
-  const userStr = localStorage.getItem('user');
-  return userStr ? JSON.parse(userStr) : null;
+// Re-export auth helpers from utils/auth.js for backward compatibility
+export { getCurrentUser, isAuthenticated } from '../utils/auth';
+
+// ==================== SENSOR MANAGEMENT APIs ====================
+
+/**
+ * Lấy tất cả sensors
+ * @param {Object} params - Query parameters (is_active, status, hardware_type)
+ */
+export const fetchSensors = async (params = {}) => {
+  try {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiClient.get(`${API_ENDPOINTS.SENSORS}${queryString ? `?${queryString}` : ''}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
 };
 
-export const isAuthenticated = () => {
-  // Kiểm tra xem có thông tin user trong localStorage không
-  return !!localStorage.getItem('user');
+/**
+ * Lấy thông tin sensor theo ID
+ */
+export const fetchSensorById = async (sensorId) => {
+  try {
+    const endpoint = API_ENDPOINTS.SENSOR_BY_ID.replace(':sensorId', sensorId);
+    const response = await apiClient.get(endpoint);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data };
+    }
+    return { success: false, error: response.data?.error || 'Không tìm thấy sensor' };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy lịch sử sensor
+ */
+export const fetchSensorHistory = async (sensorId, limit = 100) => {
+  try {
+    const endpoint = API_ENDPOINTS.SENSOR_HISTORY.replace(':sensorId', sensorId);
+    const response = await apiClient.get(`${endpoint}?limit=${limit}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Tạo sensor mới (Admin only)
+ */
+export const createSensor = async (sensorData) => {
+  try {
+    const response = await apiClient.post(API_ENDPOINTS.SENSORS, sensorData);
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message || 'Tạo sensor thành công'
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Tạo sensor thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Cập nhật sensor (Admin only)
+ */
+export const updateSensor = async (sensorId, sensorData) => {
+  try {
+    const endpoint = API_ENDPOINTS.SENSOR_BY_ID.replace(':sensorId', sensorId);
+    const response = await apiClient.put(endpoint, sensorData);
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message || 'Cập nhật sensor thành công'
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Cập nhật sensor thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Cập nhật ngưỡng báo động (Admin only)
+ */
+export const updateSensorThresholds = async (sensorId, thresholds) => {
+  try {
+    const endpoint = API_ENDPOINTS.SENSOR_THRESHOLDS.replace(':sensorId', sensorId);
+    const response = await apiClient.put(endpoint, thresholds);
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message || 'Cập nhật ngưỡng thành công'
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Cập nhật ngưỡng thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Xóa sensor (Admin only)
+ */
+export const deleteSensor = async (sensorId) => {
+  try {
+    const endpoint = API_ENDPOINTS.SENSOR_BY_ID.replace(':sensorId', sensorId);
+    const response = await apiClient.delete(endpoint);
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        message: response.data.message || 'Xóa sensor thành công'
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Xóa sensor thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+// ==================== REPORT MODERATION APIs (Moderator/Admin) ====================
+
+/**
+ * Lấy báo cáo cần kiểm duyệt
+ */
+export const fetchPendingReports = async (limit = 50) => {
+  try {
+    const response = await apiClient.get(`${API_ENDPOINTS.REPORTS_PENDING}?limit=${limit}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Duyệt/Từ chối báo cáo
+ */
+export const moderateReport = async (reportId, action, rejectionReason = null) => {
+  try {
+    const endpoint = API_ENDPOINTS.REPORT_MODERATE.replace(':reportId', reportId);
+    const payload = { action };
+    if (action === 'reject' && rejectionReason) {
+      payload.rejection_reason = rejectionReason;
+    }
+    
+    const response = await apiClient.put(endpoint, payload);
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message || `${action === 'approve' ? 'Duyệt' : 'Từ chối'} báo cáo thành công`
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Thao tác thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy xếp hạng tin cậy
+ */
+export const fetchReliabilityRanking = async (limit = 100) => {
+  try {
+    const response = await apiClient.get(`${API_ENDPOINTS.REPORTS_RELIABILITY_RANKING}?limit=${limit}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+// ==================== REPORT EVALUATION APIs ====================
+
+/**
+ * Đánh giá báo cáo
+ */
+export const evaluateReport = async (reportId, rating, comment = '') => {
+  try {
+    const endpoint = API_ENDPOINTS.REPORT_EVALUATIONS.replace(':reportId', reportId);
+    const response = await apiClient.post(endpoint, { rating, comment });
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message || 'Đánh giá thành công'
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Đánh giá thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy đánh giá của báo cáo
+ */
+export const fetchReportEvaluations = async (reportId) => {
+  try {
+    const endpoint = API_ENDPOINTS.REPORT_EVALUATIONS.replace(':reportId', reportId);
+    const response = await apiClient.get(endpoint);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy điểm trung bình của báo cáo
+ */
+export const fetchReportAverageRating = async (reportId) => {
+  try {
+    const endpoint = API_ENDPOINTS.REPORT_EVALUATIONS_AVERAGE.replace(':reportId', reportId);
+    const response = await apiClient.get(endpoint);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data };
+    }
+    return { success: false, data: null };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: null,
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+// ==================== ALERT APIs ====================
+
+/**
+ * Lấy tất cả alerts
+ */
+export const fetchAlerts = async (params = {}) => {
+  try {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiClient.get(`${API_ENDPOINTS.ALERTS}${queryString ? `?${queryString}` : ''}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy alerts đang active
+ */
+export const fetchActiveAlerts = async (params = {}) => {
+  try {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiClient.get(`${API_ENDPOINTS.ALERTS_ACTIVE}${queryString ? `?${queryString}` : ''}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Thống kê alerts
+ */
+export const fetchAlertStats = async (days = 7) => {
+  try {
+    const response = await apiClient.get(`${API_ENDPOINTS.ALERTS_STATS}?days=${days}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data };
+    }
+    return { success: false, data: null };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: null,
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy alert theo ID
+ */
+export const fetchAlertById = async (alertId) => {
+  try {
+    const endpoint = API_ENDPOINTS.ALERT_BY_ID.replace(':alertId', alertId);
+    const response = await apiClient.get(endpoint);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data };
+    }
+    return { success: false, error: response.data?.error || 'Không tìm thấy alert' };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Xác nhận alert
+ */
+export const acknowledgeAlert = async (alertId) => {
+  try {
+    const endpoint = API_ENDPOINTS.ALERT_ACKNOWLEDGE.replace(':alertId', alertId);
+    const response = await apiClient.put(endpoint);
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message || 'Xác nhận alert thành công'
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Xác nhận alert thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Đánh dấu alert đã xử lý
+ */
+export const resolveAlert = async (alertId) => {
+  try {
+    const endpoint = API_ENDPOINTS.ALERT_RESOLVE.replace(':alertId', alertId);
+    const response = await apiClient.put(endpoint);
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message || 'Đánh dấu alert đã xử lý thành công'
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Xử lý alert thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+// ==================== EMERGENCY SUBSCRIPTION APIs ====================
+
+/**
+ * Đăng ký nhận cảnh báo khẩn
+ */
+export const createEmergencySubscription = async (subscriptionData) => {
+  try {
+    const response = await apiClient.post(API_ENDPOINTS.EMERGENCY_SUBSCRIPTIONS, subscriptionData);
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message || 'Đăng ký cảnh báo thành công'
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Đăng ký cảnh báo thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy subscriptions của user
+ */
+export const fetchMySubscriptions = async () => {
+  try {
+    const response = await apiClient.get(API_ENDPOINTS.EMERGENCY_SUBSCRIPTIONS_MY);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Cập nhật subscription
+ */
+export const updateEmergencySubscription = async (subscriptionId, subscriptionData) => {
+  try {
+    const endpoint = API_ENDPOINTS.EMERGENCY_SUBSCRIPTION_BY_ID.replace(':subscriptionId', subscriptionId);
+    const response = await apiClient.put(endpoint, subscriptionData);
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message || 'Cập nhật subscription thành công'
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Cập nhật subscription thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Xóa subscription
+ */
+export const deleteEmergencySubscription = async (subscriptionId) => {
+  try {
+    const endpoint = API_ENDPOINTS.EMERGENCY_SUBSCRIPTION_BY_ID.replace(':subscriptionId', subscriptionId);
+    const response = await apiClient.delete(endpoint);
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        message: response.data.message || 'Xóa subscription thành công'
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Xóa subscription thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+// ==================== HEATMAP APIs ====================
+
+/**
+ * Lấy dữ liệu heatmap từ sensors
+ */
+export const fetchHeatmap = async (params) => {
+  try {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await axios.get(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.HEATMAP}?${queryString}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy heatmap kết hợp (Sensors + Crowd Reports)
+ */
+export const fetchCombinedHeatmap = async (params) => {
+  try {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await axios.get(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.HEATMAP_COMBINED}?${queryString}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+// ==================== OTA UPDATE APIs (Admin only) ====================
+
+/**
+ * Tạo OTA update
+ */
+export const createOTAUpdate = async (otaData) => {
+  try {
+    const response = await apiClient.post(API_ENDPOINTS.OTA, otaData);
+    
+    if (response.data && response.data.success) {
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message || 'Tạo OTA update thành công'
+      };
+    }
+    return { 
+      success: false, 
+      error: response.data?.error || 'Tạo OTA update thất bại'
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy OTA updates đang pending
+ */
+export const fetchPendingOTAUpdates = async (limit = 50) => {
+  try {
+    const response = await apiClient.get(`${API_ENDPOINTS.OTA_PENDING}?limit=${limit}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy OTA updates theo sensor
+ */
+export const fetchSensorOTAUpdates = async (sensorId) => {
+  try {
+    const endpoint = API_ENDPOINTS.OTA_SENSOR.replace(':sensorId', sensorId);
+    const response = await apiClient.get(endpoint);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+// ==================== ENERGY MONITORING APIs ====================
+
+/**
+ * Lấy energy logs theo sensor
+ */
+export const fetchEnergyLogs = async (sensorId, limit = 100) => {
+  try {
+    const endpoint = API_ENDPOINTS.ENERGY_SENSOR.replace(':sensorId', sensorId);
+    const response = await apiClient.get(`${endpoint}?limit=${limit}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy energy log mới nhất
+ */
+export const fetchLatestEnergyLog = async (sensorId) => {
+  try {
+    const endpoint = API_ENDPOINTS.ENERGY_SENSOR_LATEST.replace(':sensorId', sensorId);
+    const response = await apiClient.get(endpoint);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data };
+    }
+    return { success: false, data: null };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: null,
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Thống kê năng lượng
+ */
+export const fetchEnergyStats = async (sensorId, hours = 24) => {
+  try {
+    const endpoint = API_ENDPOINTS.ENERGY_SENSOR_STATS.replace(':sensorId', sensorId);
+    const response = await apiClient.get(`${endpoint}?hours=${hours}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data };
+    }
+    return { success: false, data: null };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: null,
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+/**
+ * Lấy sensors có pin thấp (Admin only)
+ */
+export const fetchLowBatterySensors = async (threshold = 20) => {
+  try {
+    const response = await apiClient.get(`${API_ENDPOINTS.ENERGY_LOW_BATTERY}?threshold=${threshold}`);
+    
+    if (response.data && response.data.success) {
+      return { success: true, data: response.data.data || [] };
+    }
+    return { success: false, data: [] };
+  } catch (error) {
+    return { 
+      success: false, 
+      data: [],
+      error: error.response?.data?.error || error.message
+    };
+  }
 };
 

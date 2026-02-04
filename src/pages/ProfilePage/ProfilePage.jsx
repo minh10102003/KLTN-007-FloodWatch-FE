@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, updateProfile } from '../../services/api';
-import UserDropdown from '../../components/UserDropdown';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
@@ -35,7 +34,6 @@ const ProfilePage = () => {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     loadProfile();
   }, []);
 
@@ -75,19 +73,23 @@ const ProfilePage = () => {
     setSuccess('');
   };
 
+  // Get initials for avatar
+  const getInitials = () => {
+    if (user?.full_name) {
+      const parts = user.full_name.trim().split(' ');
+      if (parts.length >= 2) {
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+      }
+      return user.full_name.charAt(0).toUpperCase();
+    }
+    return user?.username?.charAt(0).toUpperCase() || 'U';
+  };
+
   if (loading) {
     return (
-      <div className="profile-page-wrapper">
-        <div className="profile-header-bar">
-          <button onClick={() => navigate('/')} className="back-button">
-            ← Quay lại Dashboard
-          </button>
-          <UserDropdown />
-        </div>
-        <div className="profile-page">
-          <div className="profile-container">
-            <div className="loading">Đang tải thông tin...</div>
-          </div>
+      <div className="profile-page">
+        <div className="profile-container">
+          <div className="loading">Đang tải thông tin...</div>
         </div>
       </div>
     );
@@ -95,39 +97,18 @@ const ProfilePage = () => {
 
   if (!user) {
     return (
-      <div className="profile-page-wrapper">
-        <div className="profile-header-bar">
-          <button onClick={() => navigate('/')} className="back-button">
-            ← Quay lại Dashboard
-          </button>
-          <UserDropdown />
-        </div>
-        <div className="profile-page">
-          <div className="profile-container">
-            <div className="error-message">{error || 'Không thể tải thông tin người dùng'}</div>
-          </div>
+      <div className="profile-page">
+        <div className="profile-container">
+          <div className="error-message">{error || 'Không thể tải thông tin người dùng'}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="profile-page-wrapper">
-      <div className="profile-header-bar">
-        <button onClick={() => navigate('/')} className="back-button">
-          ← Quay lại Dashboard
-        </button>
-        <UserDropdown />
-      </div>
-      <div className="profile-page">
+    <div className="profile-page">
       <div className="profile-container">
-        <div className="profile-header">
-          <div className="profile-avatar">
-            <span>{user.username?.charAt(0).toUpperCase()}</span>
-          </div>
-          <h1>{user.full_name || user.username}</h1>
-          <p className="profile-role">{user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}</p>
-        </div>
+        <h1 className="profile-title">Chỉnh sửa hồ sơ của bạn</h1>
 
         {success && (
           <div className="success-message">
@@ -142,114 +123,138 @@ const ProfilePage = () => {
         )}
 
         <form className="profile-form" onSubmit={handleSubmit}>
-          <div className="form-section">
-            <h2>Thông tin cá nhân</h2>
-
-            <div className="form-group">
-              <label>Tên đăng nhập</label>
-              <input
-                type="text"
-                value={user.username}
-                disabled
-                className="input-disabled"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="email">Email *</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                disabled={!isEditing}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="full_name">Họ và tên</label>
-              <input
-                type="text"
-                id="full_name"
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleChange}
-                disabled={!isEditing}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="phone">Số điện thoại</label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                disabled={!isEditing}
-              />
-            </div>
-          </div>
-
-          <div className="form-section">
-            <h2>Thông tin tài khoản</h2>
-            
-            <div className="info-grid">
-              <div className="info-item">
-                <span className="info-label">Vai trò:</span>
-                <span className="info-value">{user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}</span>
+          <div className="profile-form-layout">
+            {/* Left Side - Photo */}
+            <div className="profile-photo-section">
+              <label className="photo-label">Ảnh đại diện:</label>
+              <div className="profile-avatar-container">
+                <div className="profile-avatar">
+                  <span>{getInitials()}</span>
+                </div>
               </div>
-              <div className="info-item">
-                <span className="info-label">Ngày tạo:</span>
-                <span className="info-value">
-                  {user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : 'N/A'}
-                </span>
+              <button 
+                type="button"
+                className="btn-change-photo"
+                onClick={() => {
+                  // TODO: Implement photo upload
+                }}
+              >
+                ĐỔI ẢNH
+              </button>
+            </div>
+
+            {/* Right Side - Form Fields */}
+            <div className="profile-form-fields">
+              <div className="form-group">
+                <label htmlFor="username">Tên đăng nhập</label>
+                <input
+                  type="text"
+                  id="username"
+                  value={user.username}
+                  disabled
+                  className="input-disabled"
+                />
               </div>
-              {user.last_login && (
-                <div className="info-item">
-                  <span className="info-label">Đăng nhập lần cuối:</span>
-                  <span className="info-value">
-                    {new Date(user.last_login).toLocaleString('vi-VN')}
-                  </span>
+
+              <div className="form-group">
+                <label htmlFor="full_name">Họ và tên</label>
+                <input
+                  type="text"
+                  id="full_name"
+                  name="full_name"
+                  value={formData.full_name}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  placeholder="Nhập họ và tên"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  placeholder="Nhập email"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="phone">Số điện thoại</label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  placeholder="Nhập số điện thoại"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Vai trò</label>
+                <input
+                  type="text"
+                  value={user.role === 'admin' ? 'Quản trị viên' : user.role === 'moderator' ? 'Điều hành viên' : 'Người dùng'}
+                  disabled
+                  className="input-disabled"
+                />
+              </div>
+
+              {user.created_at && (
+                <div className="form-group">
+                  <label>Ngày tạo</label>
+                  <input
+                    type="text"
+                    value={new Date(user.created_at).toLocaleDateString('vi-VN')}
+                    disabled
+                    className="input-disabled"
+                  />
                 </div>
               )}
             </div>
           </div>
 
+          {/* Form Actions */}
           <div className="form-actions">
-            {!isEditing ? (
+            <button 
+              type="button" 
+              className="btn-cancel"
+              onClick={() => {
+                if (isEditing) {
+                  handleCancel();
+                } else {
+                  navigate(-1);
+                }
+              }}
+              disabled={saving}
+            >
+              Hủy
+            </button>
+            {isEditing ? (
+              <button 
+                type="submit" 
+                className="btn-save"
+                disabled={saving}
+              >
+                {saving ? 'Đang lưu...' : 'Lưu'}
+              </button>
+            ) : (
               <button 
                 type="button" 
                 className="btn-edit"
                 onClick={() => setIsEditing(true)}
               >
-                Chỉnh sửa thông tin
+                Chỉnh sửa
               </button>
-            ) : (
-              <>
-                <button 
-                  type="button" 
-                  className="btn-cancel"
-                  onClick={handleCancel}
-                  disabled={saving}
-                >
-                  Hủy
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn-save"
-                  disabled={saving}
-                >
-                  {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                </button>
-              </>
             )}
           </div>
         </form>
       </div>
-    </div>
     </div>
   );
 };

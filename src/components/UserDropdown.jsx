@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaUser, FaRightFromBracket, FaCrown, FaChevronDown } from 'react-icons/fa6';
 import { logout, getCurrentUser } from '../services/api';
 
 const UserDropdown = () => {
@@ -37,9 +38,9 @@ const UserDropdown = () => {
       <button 
         onClick={() => setDropdownOpen(!dropdownOpen)}
         style={{
-          background: 'rgba(255,255,255,0.2)',
-          border: 'none',
-          color: 'white',
+          background: 'white',
+          border: '2px solid #1976d2',
+          color: '#1976d2',
           padding: '8px 16px',
           borderRadius: '20px',
           cursor: 'pointer',
@@ -49,20 +50,23 @@ const UserDropdown = () => {
           gap: '8px',
           fontWeight: '500',
           transition: 'all 0.3s ease',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
         }}
         onMouseEnter={(e) => {
-          e.target.style.background = 'rgba(255,255,255,0.3)';
+          e.target.style.background = '#1976d2';
+          e.target.style.color = 'white';
         }}
         onMouseLeave={(e) => {
-          e.target.style.background = 'rgba(255,255,255,0.2)';
+          e.target.style.background = 'white';
+          e.target.style.color = '#1976d2';
         }}
       >
         <span style={{
           width: '28px',
           height: '28px',
           borderRadius: '50%',
-          background: 'white',
-          color: '#1E3A8A',
+          background: '#1976d2',
+          color: 'white',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -72,7 +76,7 @@ const UserDropdown = () => {
           {currentUser.username?.charAt(0).toUpperCase()}
         </span>
         {currentUser.full_name || currentUser.username}
-        <span style={{ fontSize: '0.7rem' }}>▼</span>
+        <FaChevronDown style={{ fontSize: '0.7rem' }} />
       </button>
 
       {dropdownOpen && (
@@ -113,7 +117,15 @@ const UserDropdown = () => {
               textTransform: 'uppercase',
               fontWeight: '500'
             }}>
-              {currentUser.role === 'admin' ? '👑 Quản trị viên' : '👤 Người dùng'}
+              {currentUser.role === 'admin' ? (
+                <>
+                  <FaCrown style={{ marginRight: '4px' }} /> Quản trị viên
+                </>
+              ) : (
+                <>
+                  <FaUser style={{ marginRight: '4px' }} /> Người dùng
+                </>
+              )}
             </div>
           </div>
 
@@ -140,7 +152,7 @@ const UserDropdown = () => {
               e.target.style.background = 'white';
             }}
           >
-            <span>👤</span>
+            <FaUser />
             Thông tin cá nhân
           </button>
 
@@ -170,7 +182,7 @@ const UserDropdown = () => {
               e.target.style.background = 'white';
             }}
           >
-            <span>🚪</span>
+            <FaRightFromBracket />
             Đăng xuất
           </button>
         </div>

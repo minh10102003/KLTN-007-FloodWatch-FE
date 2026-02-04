@@ -1,40 +1,71 @@
 import React from 'react';
+import { 
+  FaCheck, 
+  FaXmark, 
+  FaClock, 
+  FaCircleQuestion, 
+  FaStar, 
+  FaCircle, 
+  FaTriangleExclamation, 
+  FaMobileScreen
+} from 'react-icons/fa6';
+import { WiFlood } from 'react-icons/wi';
+import { MdLocationOn } from 'react-icons/md';
 import { statusColors } from '../utils/constants';
 
 const CrowdReportsList = ({ reports, loading }) => {
-  // Hàm lấy màu và icon theo validation status
-  const getStatusInfo = (status, verified) => {
-    if (verified || status === 'cross_verified') {
-      return { color: '#28a745', icon: '✅', text: 'Đã xác minh' };
+  // Hàm lấy status info - ưu tiên moderation_status theo logic đúng
+  const getStatusInfo = (report) => {
+    // Logic: Nếu moderation_status đã được xử lý (approved/rejected), hiển thị nó
+    // Nếu moderation_status = 'pending' hoặc null, hiển thị validation_status
+    const moderationStatus = report.moderation_status;
+    const validationStatus = report.validation_status;
+    
+    // Nếu đã được moderator xử lý (approved hoặc rejected), ưu tiên hiển thị
+    if (moderationStatus === 'approved' || moderationStatus === 'rejected') {
+      const statusConfig = {
+        approved: { text: 'Đã duyệt', color: '#28a745', icon: FaCheck },
+        rejected: { text: 'Đã từ chối', color: '#dc3545', icon: FaXmark }
+      };
+      return statusConfig[moderationStatus];
     }
-    if (status === 'pending') {
-      return { color: '#ffc107', icon: '⏳', text: 'Chờ xem xét' };
+    
+    // Nếu moderation_status = 'pending' hoặc null, hiển thị validation_status
+    const displayStatus = moderationStatus === 'pending' || !moderationStatus 
+      ? validationStatus 
+      : moderationStatus;
+    
+    // Badge mapping cho validation_status
+    const statusConfig = {
+      pending: { text: 'Chờ xét duyệt', color: '#ffc107', icon: FaClock },
+      verified: { text: 'Đã xác minh', color: '#17a2b8', icon: FaCheck },
+      cross_verified: { text: 'Đã xác minh chéo', color: '#28a745', icon: FaCheck }
+    };
+    
+    // Nếu có verified_by_sensor, ưu tiên hiển thị cross_verified
+    if (report.verified_by_sensor) {
+      return statusConfig.cross_verified;
     }
-    if (status === 'verified') {
-      return { color: '#17a2b8', icon: '✅', text: 'Đã xác minh' };
-    }
-    if (status === 'rejected') {
-      return { color: '#dc3545', icon: '❌', text: 'Đã từ chối' };
-    }
-    return { color: '#6c757d', icon: '❓', text: 'Không xác định' };
+    
+    return statusConfig[displayStatus] || { text: 'Không xác định', color: '#6c757d', icon: FaCircleQuestion };
   };
 
   // Hàm format reliability score
   const getReliabilityBadge = (score) => {
-    if (score >= 81) return { color: '#28a745', text: '⭐ Rất cao', emoji: '⭐' };
-    if (score >= 61) return { color: '#17a2b8', text: '🟢 Cao', emoji: '🟢' };
-    if (score >= 31) return { color: '#ffc107', text: '🟡 Trung bình', emoji: '🟡' };
-    return { color: '#dc3545', text: '🔴 Thấp', emoji: '🔴' };
+    if (score >= 81) return { color: '#28a745', text: 'Rất cao', icon: FaStar };
+    if (score >= 61) return { color: '#17a2b8', text: 'Cao', icon: FaCircle };
+    if (score >= 31) return { color: '#ffc107', text: 'Trung bình', icon: FaCircle };
+    return { color: '#dc3545', text: 'Thấp', icon: FaCircle };
   };
 
-  // Hàm format flood level
+  // Hàm format flood level - dùng WiFlood cho tất cả mức độ ngập
   const getFloodLevelInfo = (level) => {
     const levels = {
-      'Nhẹ': { color: '#17a2b8', emoji: '💧', desc: 'Đến mắt cá (~10cm)' },
-      'Trung bình': { color: '#ffc107', emoji: '⚠️', desc: 'Đến đầu gối (~30cm)' },
-      'Nặng': { color: '#dc3545', emoji: '🚨', desc: 'Ngập nửa xe (~50cm)' }
+      'Nhẹ': { color: '#17a2b8', icon: WiFlood, desc: 'Đến mắt cá (~10cm)' },
+      'Trung bình': { color: '#ffc107', icon: WiFlood, desc: 'Đến đầu gối (~30cm)' },
+      'Nặng': { color: '#dc3545', icon: WiFlood, desc: 'Ngập nửa xe (~50cm)' }
     };
-    return levels[level] || { color: '#6c757d', emoji: '❓', desc: level };
+    return levels[level] || { color: '#6c757d', icon: FaCircleQuestion, desc: level };
   };
 
   if (loading) {
@@ -62,11 +93,11 @@ const CrowdReportsList = ({ reports, loading }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <h3 style={{ margin: '0 0 10px 0', fontSize: '1.1rem', color: '#2c3e50' }}>
-        📱 Báo cáo từ người dân ({reports.length})
+      <h3 style={{ margin: '0 0 10px 0', fontSize: '1.1rem', color: '#2c3e50', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        Báo cáo từ người dân ({reports.length})
       </h3>
       {reports.map((report, index) => {
-        const statusInfo = getStatusInfo(report.validation_status, report.verified_by_sensor);
+        const statusInfo = getStatusInfo(report);
         const reliabilityInfo = getReliabilityBadge(report.reliability_score || 50);
         const levelInfo = getFloodLevelInfo(report.flood_level);
 
@@ -98,7 +129,7 @@ const CrowdReportsList = ({ reports, loading }) => {
                       borderRadius: '10px',
                       fontWeight: 'bold'
                     }}>
-                      {reliabilityInfo.emoji} {report.reliability_score}
+                      <reliabilityInfo.icon style={{ fontSize: '10px' }} /> {report.reliability_score}
                     </span>
                   )}
                 </div>
@@ -114,14 +145,14 @@ const CrowdReportsList = ({ reports, loading }) => {
                 borderRadius: '12px',
                 fontWeight: 'bold'
               }}>
-                {statusInfo.icon} {statusInfo.text}
+                <statusInfo.icon style={{ fontSize: '11px' }} /> {statusInfo.text}
               </span>
             </div>
 
             {/* Body */}
             <div style={{ marginTop: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <span style={{ fontSize: '18px' }}>{levelInfo.emoji}</span>
+                <levelInfo.icon style={{ fontSize: '16px' }} />
                 <strong style={{ color: levelInfo.color, fontSize: '14px' }}>
                   {report.flood_level}
                 </strong>
@@ -139,12 +170,12 @@ const CrowdReportsList = ({ reports, loading }) => {
                   background: '#f0fff4',
                   borderRadius: '4px'
                 }}>
-                  ✅ Đã xác minh bởi hệ thống cảm biến
+                  <FaCheck style={{ marginRight: '4px' }} /> Đã xác minh bởi hệ thống cảm biến
                 </div>
               )}
 
               <div style={{ fontSize: '11px', color: '#999', marginTop: '6px' }}>
-                📍 {report.lat.toFixed(4)}, {report.lng.toFixed(4)}
+                <MdLocationOn style={{ marginRight: '4px' }} /> {report.lat.toFixed(4)}, {report.lng.toFixed(4)}
               </div>
             </div>
           </div>

@@ -6,12 +6,12 @@ export const statusColors = {
   offline: '#6c757d',   // Xám
 };
 
-// Nhãn trạng thái
+// Nhãn trạng thái (không có icon, icon sẽ được xử lý ở component)
 export const statusLabels = {
-  normal: '✅ Bình thường',
-  warning: '⚠️ Cảnh báo',
-  danger: '🚨 Nguy hiểm',
-  offline: '🔌 Mất kết nối'
+  normal: 'Bình thường',
+  warning: 'Cảnh báo',
+  danger: 'Nguy hiểm',
+  offline: 'Mất kết nối'
 };
 
 // Tọa độ mặc định (TP.HCM)

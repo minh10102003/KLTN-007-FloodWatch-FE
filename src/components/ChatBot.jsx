@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { FaXmark } from 'react-icons/fa6';
+import { MdChatBubble } from 'react-icons/md';
 
 const ChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -53,11 +55,13 @@ const ChatBot = () => {
           border: 'none',
           cursor: 'pointer',
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-          fontSize: '24px',
-          zIndex: 1000
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
-        💬
+        <MdChatBubble style={{ fontSize: '32px' }} />
       </button>
     );
   }
@@ -101,7 +105,7 @@ const ChatBot = () => {
             padding: '0 5px'
           }}
         >
-          ✕
+          <FaXmark />
         </button>
       </div>
 

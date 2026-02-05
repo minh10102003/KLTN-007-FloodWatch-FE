@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { FaWater } from 'react-icons/fa6';
 import { register } from '../../services/api';
 import './RegisterPage.css';
 
@@ -61,13 +62,8 @@ const RegisterPage = () => {
   return (
     <div className="register-page">
       <div className="register-container">
-        <div className="register-header">
-          <h1>🌊 FloodWatch</h1>
-          <p>Đăng ký tài khoản mới</p>
-        </div>
-
         <form className="register-form" onSubmit={handleSubmit}>
-          <h2>Tạo tài khoản</h2>
+          <h2 className="register-title">Đăng ký</h2>
           
           {error && (
             <div className="error-message">
@@ -83,7 +79,7 @@ const RegisterPage = () => {
               name="username"
               value={formData.username}
               onChange={handleChange}
-              placeholder="Nhập tên đăng nhập"
+              placeholder=""
               required
               autoFocus
             />
@@ -97,7 +93,7 @@ const RegisterPage = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="Nhập email"
+              placeholder=""
               required
             />
           </div>
@@ -110,7 +106,7 @@ const RegisterPage = () => {
               name="full_name"
               value={formData.full_name}
               onChange={handleChange}
-              placeholder="Nhập họ và tên"
+              placeholder=""
             />
           </div>
 
@@ -122,7 +118,7 @@ const RegisterPage = () => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              placeholder="Nhập số điện thoại"
+              placeholder=""
             />
           </div>
 
@@ -134,7 +130,7 @@ const RegisterPage = () => {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
+              placeholder=""
               required
             />
           </div>
@@ -147,7 +143,7 @@ const RegisterPage = () => {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              placeholder="Nhập lại mật khẩu"
+              placeholder=""
               required
             />
           </div>
@@ -161,7 +157,7 @@ const RegisterPage = () => {
           </button>
 
           <div className="register-footer">
-            <p>Đã có tài khoản? <a href="/login">Đăng nhập ngay</a></p>
+            <p>Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p>
           </div>
         </form>
       </div>

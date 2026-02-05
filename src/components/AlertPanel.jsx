@@ -1,4 +1,6 @@
 import React from 'react';
+import { FaTriangleExclamation } from 'react-icons/fa6';
+import { WiFlood } from 'react-icons/wi';
 import { statusColors, statusLabels } from '../utils/constants';
 
 const AlertPanel = ({ floodData }) => {
@@ -37,8 +39,8 @@ const AlertPanel = ({ floodData }) => {
       overflowY: 'auto',
       boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
     }}>
-      <h3 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', color: '#2c3e50' }}>
-        🚨 Cảnh báo mới nhất ({alerts.length})
+      <h3 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', color: '#2c3e50', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <FaTriangleExclamation /> Cảnh báo mới nhất ({alerts.length})
       </h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {alerts.map((alert, index) => {
@@ -69,7 +71,9 @@ const AlertPanel = ({ floodData }) => {
                 </span>
               </div>
               <div style={{ fontSize: '13px', color: '#555', marginTop: '5px' }}>
-                <div>Mực nước: <strong style={{ color: color }}>{alert.water_level.toFixed(1)} cm</strong></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <WiFlood /> Mực nước: <strong style={{ color: color }}>{alert.water_level.toFixed(1)} cm</strong>
+                </div>
                 <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
                   {new Date(alert.last_data_time || alert.created_at).toLocaleString('vi-VN')}
                 </div>

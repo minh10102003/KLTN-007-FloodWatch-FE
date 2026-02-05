@@ -6,7 +6,11 @@ import NewReportPage from './pages/NewReportPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
-import { isAuthenticated } from './services/api';
+import ModerationPage from './pages/ModerationPage';
+import NewsDetailPage from './pages/NewsDetailPage';
+import MapPage from './pages/MapPage';
+import Layout from './components/Layout';
+import { isAuthenticated, isModerator } from './utils/auth';
 import './App.css';
 
 // Protected Route Component - chỉ cho các trang yêu cầu đăng nhập bắt buộc
@@ -14,21 +18,92 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated() ? children : <Navigate to="/login" replace />;
 };
 
+// Moderator Route Component - chỉ cho moderator và admin
+const ModeratorRoute = ({ children }) => {
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!isModerator()) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
 function App() {
   return (
     <Router>
       <Routes>
+        {/* Login và Register không có Navigation */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        {/* Dashboard cho phép guest xem */}
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        {/* Reports cho phép guest xem */}
-        <Route path="/reports" element={<ReportsPage />} />
-        {/* Tạo báo cáo mới yêu cầu đăng nhập */}
-        <Route path="/report/new" element={<ProtectedRoute><NewReportPage /></ProtectedRoute>} />
-        {/* Profile yêu cầu đăng nhập */}
-        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        
+        {/* Các trang khác có Navigation */}
+        <Route 
+          path="/" 
+          element={
+            <Layout>
+              <DashboardPage />
+            </Layout>
+          } 
+        />
+        <Route 
+          path="/dashboard" 
+          element={
+            <Layout>
+              <DashboardPage />
+            </Layout>
+          } 
+        />
+        <Route 
+          path="/reports" 
+          element={
+            <Layout>
+              <ReportsPage />
+            </Layout>
+          } 
+        />
+        <Route 
+          path="/report/new" 
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <NewReportPage />
+              </ProtectedRoute>
+            </Layout>
+          } 
+        />
+        <Route 
+          path="/profile" 
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            </Layout>
+          } 
+        />
+        <Route 
+          path="/moderation" 
+          element={
+            <Layout>
+              <ModeratorRoute>
+                <ModerationPage />
+              </ModeratorRoute>
+            </Layout>
+          } 
+        />
+        <Route 
+          path="/news/:id" 
+          element={
+            <Layout>
+              <NewsDetailPage />
+            </Layout>
+          } 
+        />
+        <Route 
+          path="/map" 
+          element={<MapPage />} 
+        />
       </Routes>
     </Router>
   );
